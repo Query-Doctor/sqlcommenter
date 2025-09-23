@@ -23,9 +23,12 @@
     "hono": "^4.9.8",
     "rewiremock": "^3.14.3"
   },
+  "dependencies": {
+    "@opentelemetry/api": "~1.9.0"
+  },
   "peerDependencies": {
-    "@opentelemetry/core": "^2.1.0",
-    "drizzle-orm": "^0.44.5 || ^1.0.0"
+    "@opentelemetry/core": ">=1.0.0",
+    "drizzle-orm": ">=0.35.0"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -44,8 +47,5 @@
   },
   "author": "Query Doctor",
   "license": "Apache-2.0",
-  "packageManager": "pnpm@10.16.1+sha512.0e155aa2629db8672b49e8475da6226aa4bdea85fdcdfdc15350874946d4f3c91faaf64cbdc4a5d1ab8002f473d5c3fcedcd197989cf0390f9badd3c04678706",
-  "dependencies": {
-    "@opentelemetry/api": "^1.9.0"
-  }
+  "packageManager": "pnpm@10.16.1+sha512.0e155aa2629db8672b49e8475da6226aa4bdea85fdcdfdc15350874946d4f3c91faaf64cbdc4a5d1ab8002f473d5c3fcedcd197989cf0390f9badd3c04678706"
 }

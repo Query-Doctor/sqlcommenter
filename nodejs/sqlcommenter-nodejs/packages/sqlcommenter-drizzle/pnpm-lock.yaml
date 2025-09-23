@@ -9,13 +9,13 @@ importers:
   .:
     dependencies:
       '@opentelemetry/api':
-        specifier: ^1.9.0
+        specifier: ~1.9.0
         version: 1.9.0
       '@opentelemetry/core':
-        specifier: ^2.1.0
+        specifier: '>=1.0.0'
         version: 2.1.0(@opentelemetry/api@1.9.0)
       drizzle-orm:
-        specifier: ^0.44.5 || ^1.0.0
+        specifier: '>=0.35.0'
         version: 0.44.5(@opentelemetry/api@1.9.0)
     devDependencies:
       '@types/node':

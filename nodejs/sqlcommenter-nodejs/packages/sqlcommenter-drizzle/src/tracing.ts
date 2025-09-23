@@ -1,5 +1,5 @@
 import type { Tag } from "./sqlcommenter.js";
-import { context, TextMapSetter } from "@opentelemetry/api";
+import { context, type TextMapSetter } from "@opentelemetry/api";
 import { W3CTraceContextPropagator } from "@opentelemetry/core";
 
 const sqlcommentAppender: TextMapSetter<Tag[]> = {
