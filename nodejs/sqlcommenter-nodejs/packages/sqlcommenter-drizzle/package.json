@@ -1,0 +1,47 @@
+{
+  "name": "@query-doctor/sqlcommenter-drizzle",
+  "version": "0.0.1",
+  "description": "SQLCommenter patch for drizzle-orm",
+  "main": "dist/index.js",
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./http": {
+      "import": "./dist/http.js",
+      "types": "./dist/http.d.ts"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "hono": "^4.9.8",
+    "rewiremock": "^3.14.3"
+  },
+  "peerDependencies": {
+    "@opentelemetry/core": "^2.1.0",
+    "drizzle-orm": "^0.44.5 || ^1.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "test": "mocha --recursive",
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "query-doctor/sqlcommenter"
+  },
+  "author": "Query Doctor",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@10.16.1+sha512.0e155aa2629db8672b49e8475da6226aa4bdea85fdcdfdc15350874946d4f3c91faaf64cbdc4a5d1ab8002f473d5c3fcedcd197989cf0390f9badd3c04678706",
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0"
+  }
+}
