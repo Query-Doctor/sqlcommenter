@@ -36,7 +36,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "query-doctor/sqlcommenter"
+    "url": "git+https://github.com/query-doctor/sqlcommenter.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   },
   "author": "Query Doctor",
   "license": "Apache-2.0",
