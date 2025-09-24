@@ -16,7 +16,19 @@ type DriverSession = { prepareQuery: (query: unknown) => unknown };
 const contexts = new WeakMap<DriverSession, QueryContext>();
 
 function isValidCaller(line: string): boolean {
-  return !line.includes("node_modules") && !line.includes(LIBRARY_NAME);
+  if (line.includes("node_modules")) {
+    return false;
+  }
+  // make sure we don't break our own tests
+  // should ideally not even be included in this function to begin with since
+  // it'll never be true outside of testing
+  if (line.includes(`${LIBRARY_NAME}/test/`)) {
+    return true;
+  }
+  if (line.includes(LIBRARY_NAME)) {
+    return false;
+  }
+  return true;
 }
 
 // (file.ts:12:12) or file.ts:12:12
@@ -70,12 +82,6 @@ export function patchDrizzle<T>(
   drizzle: T & {
     // is this nullable?
     session?: DriverSession;
-    query?: {
-      [key in string]: {
-        findFirst: unknown;
-        findMany: unknown;
-      };
-    };
     execute: unknown;
     // not all these methods exist on all clients
     select?: Function;
@@ -111,10 +117,10 @@ export function patchDrizzle<T>(
       },
     });
   }
-  if (drizzle.query) {
+  if (drizzle && "query" in drizzle && drizzle.query) {
     for (const key in drizzle.query) {
       for (const func of DRIZZLE_ORM_MODE_METHODS) {
-        const schema = drizzle.query[key];
+        const schema = drizzle.query[key as keyof typeof drizzle.query];
         if (!schema[func] || typeof schema[func] !== "function") {
           continue;
         }
@@ -193,9 +199,11 @@ function patchSession(session: DriverSession) {
         }
         if (args[0]) {
           const query = args[0];
-          if (!alreadyHasComment(query.sql) && requestContext) {
-            for (const key in requestContext) {
-              tags.push([key, String(requestContext[key])]);
+          if (!alreadyHasComment(query.sql)) {
+            if (requestContext) {
+              for (const key in requestContext) {
+                tags.push([key, String(requestContext[key])]);
+              }
             }
             const sqlComment = serializeTags(tags);
             query.sql += sqlComment;

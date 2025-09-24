@@ -8,7 +8,7 @@ import type { RequestContext } from "./request-context.js";
  */
 export function withRequestContext(
   context: RequestContext,
-  next: () => Promise<unknown>
+  next: () => Promise<unknown>,
 ) {
   als.run(context, next);
 }
