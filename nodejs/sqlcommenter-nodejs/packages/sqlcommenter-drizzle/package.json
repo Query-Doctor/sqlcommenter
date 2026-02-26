@@ -1,6 +1,6 @@
 {
   "name": "@query-doctor/sqlcommenter-drizzle",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "SQLCommenter patch for drizzle-orm",
   "main": "dist/cjs/index.js",
   "type": "module",
