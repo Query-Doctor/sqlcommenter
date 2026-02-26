@@ -15,15 +15,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
-          cache: pnpm
-          cache-dependency-path: nodejs/sqlcommenter-nodejs/packages/sqlcommenter-typeorm/pnpm-lock.yaml
-      - run: pnpm install
+          cache: npm
+          cache-dependency-path: nodejs/sqlcommenter-nodejs/packages/sqlcommenter-typeorm/package-lock.json
+      - run: npm install
         working-directory: ./nodejs/sqlcommenter-nodejs/packages/sqlcommenter-typeorm
-      - run: pnpm run build
+      - run: npm run build
         working-directory: ./nodejs/sqlcommenter-nodejs/packages/sqlcommenter-typeorm
-      - run: pnpm test
+      - run: npm test
         working-directory: ./nodejs/sqlcommenter-nodejs/packages/sqlcommenter-typeorm
