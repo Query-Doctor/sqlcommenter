@@ -1,0 +1,29 @@
+name: Nodejs MikroORM Tests
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - nodejs/sqlcommenter-nodejs/packages/sqlcommenter-mikroorm/**
+  pull_request:
+    paths:
+      - nodejs/sqlcommenter-nodejs/packages/sqlcommenter-mikroorm/**
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: nodejs/sqlcommenter-nodejs/packages/sqlcommenter-mikroorm/pnpm-lock.yaml
+      - run: pnpm install
+        working-directory: ./nodejs/sqlcommenter-nodejs/packages/sqlcommenter-mikroorm
+      - run: pnpm run build
+        working-directory: ./nodejs/sqlcommenter-nodejs/packages/sqlcommenter-mikroorm
+      - run: pnpm test
+        working-directory: ./nodejs/sqlcommenter-nodejs/packages/sqlcommenter-mikroorm
