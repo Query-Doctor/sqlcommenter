@@ -1,6 +1,6 @@
 {
   "name": "@query-doctor/sqlcommenter-mikroorm",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "SQLCommenter patch for MikroORM",
   "main": "dist/cjs/index.js",
   "type": "module",
@@ -32,7 +32,7 @@
   },
   "devDependencies": {
     "@mikro-orm/better-sqlite": "^6.6.7",
-    "@types/node": "^24.5.2",
+    "@types/node": "^20.19.34",
     "better-sqlite3": "^12.6.2",
     "tsx": "^4.20.5",
     "typescript": "^5.9.3"
@@ -45,7 +45,7 @@
     "@opentelemetry/core": ">=1.0.0"
   },
   "engines": {
-    "node": ">=24.8.0"
+    "node": ">=20.0.0"
   },
   "scripts": {
     "test": "node --import=tsx --test test/**/*.spec.ts",

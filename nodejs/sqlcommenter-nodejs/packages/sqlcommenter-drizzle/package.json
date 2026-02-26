@@ -1,6 +1,6 @@
 {
   "name": "@query-doctor/sqlcommenter-drizzle",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "SQLCommenter patch for drizzle-orm",
   "main": "dist/cjs/index.js",
   "type": "module",
@@ -32,7 +32,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.3.10",
-    "@types/node": "^24.5.2",
+    "@types/node": "^20.19.34",
     "hono": "^4.9.8",
     "postgres": "^3.4.7",
     "rewiremock": "^3.14.3",
@@ -47,7 +47,7 @@
     "drizzle-orm": ">=0.35.0"
   },
   "engines": {
-    "node": ">=24.8.0"
+    "node": ">=20.0.0"
   },
   "scripts": {
     "test": "node --import=tsx --test test/**/*.spec.ts",
