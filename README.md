@@ -21,3 +21,5 @@ Contains all the various `sqlcommenter-*` implementations.
   - [X] [Drizzle](nodejs/sqlcommenter-nodejs/packages/sqlcommenter-drizzle/README.md)
 - [X] Php
   - [X] [Laravel](php/sqlcommenter-php/packages/sqlcommenter-laravel)
+- [X] .NET
+  - [X] [EF Core](dotnet/sqlcommenter-efcore/README.md)
