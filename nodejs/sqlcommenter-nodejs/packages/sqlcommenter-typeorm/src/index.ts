@@ -1,6 +1,7 @@
 import { alreadyHasTrailingComment, serializeTags, type Tag } from "./sqlcommenter.js";
 import { als } from "./als.js";
 import { pushW3CTraceContext } from "./tracing.js";
+import { resolveFilePath } from "./path.js";
 
 const LIBRARY_NAME = "sqlcommenter-typeorm";
 
@@ -47,7 +48,7 @@ export function traceCaller(): string | undefined {
   }
   const match = methodCaller.match(filepathRegex);
   if (match) {
-    return match[1];
+    return resolveFilePath(match[1]);
   }
 }
 
