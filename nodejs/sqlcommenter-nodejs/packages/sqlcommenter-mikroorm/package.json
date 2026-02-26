@@ -1,6 +1,6 @@
 {
   "name": "@query-doctor/sqlcommenter-mikroorm",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "SQLCommenter patch for MikroORM",
   "main": "dist/cjs/index.js",
   "type": "module",
