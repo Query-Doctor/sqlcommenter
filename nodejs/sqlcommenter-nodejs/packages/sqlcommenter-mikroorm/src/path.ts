@@ -28,6 +28,35 @@ export function findProjectRoot(): string {
   return projectRoot;
 }
 
+/**
+ * Resolves a file path from a stack trace to a correct absolute path.
+ *
+ * When compiled JS is relocated (e.g., postbuild copies `dist/` to a deployment directory),
+ * source-map-resolved paths become incorrect because the relative `sources` entries in
+ * `.map` files resolve against the new location instead of the original project.
+ *
+ * This extracts the `src/`-relative portion and reconstructs the path using the real
+ * project root.
+ *
+ * @param raw - A stack trace entry like "/wrong/path/src/routes/admin.ts:12:15"
+ * @returns The resolved path like "/project/root/src/routes/admin.ts:12:15"
+ */
+export function resolveFilePath(raw: string): string {
+  // Split off :line:column suffix
+  const match = raw.match(/^(.*?):(\d+:\d+)$/);
+  if (!match) {
+    return raw;
+  }
+  const [, filePath, lineCol] = match;
+  const srcIdx = filePath.indexOf("src/");
+  if (srcIdx < 0) {
+    return raw;
+  }
+  const projectRoot = findProjectRoot();
+  const relativePath = filePath.substring(srcIdx);
+  return `${projectRoot}/${relativePath}:${lineCol}`;
+}
+
 /** @internal Exposed for testing only */
 export function _resetProjectRootCache() {
   cachedProjectRoot = undefined;
