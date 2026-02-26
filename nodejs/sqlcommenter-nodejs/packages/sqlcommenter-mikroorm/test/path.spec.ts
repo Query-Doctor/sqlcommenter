@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   findProjectRoot,
   resolveFilePath,
+  applyWslPrefix,
   _resetProjectRootCache,
 } from "../src/path.js";
 
@@ -66,5 +67,52 @@ test("resolveFilePath", async (t) => {
   await t.test("returns raw string if no line:column suffix", () => {
     const result = resolveFilePath("/some/path/src/file.ts");
     assert.strictEqual(result, "/some/path/src/file.ts");
+  });
+});
+
+test("applyWslPrefix", async (t) => {
+  const originalWslDistroName = process.env.WSL_DISTRO_NAME;
+
+  t.afterEach(() => {
+    if (originalWslDistroName === undefined) {
+      delete process.env.WSL_DISTRO_NAME;
+    } else {
+      process.env.WSL_DISTRO_NAME = originalWslDistroName;
+    }
+  });
+
+  await t.test("prefixes path when WSL_DISTRO_NAME is set", () => {
+    process.env.WSL_DISTRO_NAME = "Ubuntu-22.04";
+    const path = "/home/user/project/src/file.ts:1:1";
+    const result = applyWslPrefix(path);
+    assert.strictEqual(result, "//wsl.localhost/Ubuntu-22.04/home/user/project/src/file.ts:1:1");
+  });
+
+  await t.test("returns path unchanged when WSL_DISTRO_NAME is not set", () => {
+    delete process.env.WSL_DISTRO_NAME;
+    const path = "/home/user/project/src/file.ts:1:1";
+    const result = applyWslPrefix(path);
+    assert.strictEqual(result, path);
+  });
+});
+
+test("resolveFilePath with WSL", async (t) => {
+  const originalWslDistroName = process.env.WSL_DISTRO_NAME;
+
+  t.afterEach(() => {
+    _resetProjectRootCache();
+    if (originalWslDistroName === undefined) {
+      delete process.env.WSL_DISTRO_NAME;
+    } else {
+      process.env.WSL_DISTRO_NAME = originalWslDistroName;
+    }
+  });
+
+  await t.test("applies WSL prefix to resolved src/ paths", () => {
+    process.env.WSL_DISTRO_NAME = "Ubuntu-22.04";
+    const projectRoot = findProjectRoot();
+    const rawPath = "/wrong/deploy/dir/src/routes/admin.ts:12:15";
+    const result = resolveFilePath(rawPath);
+    assert.strictEqual(result, `//wsl.localhost/Ubuntu-22.04${projectRoot}/src/routes/admin.ts:12:15`);
   });
 });
