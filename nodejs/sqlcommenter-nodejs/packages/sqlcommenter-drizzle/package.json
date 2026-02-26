@@ -1,21 +1,33 @@
 {
   "name": "@query-doctor/sqlcommenter-drizzle",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "SQLCommenter patch for drizzle-orm",
-  "main": "dist/index.js",
+  "main": "dist/cjs/index.js",
   "type": "module",
-  "types": "dist/index.d.ts",
+  "types": "dist/esm/index.d.ts",
   "files": [
     "dist"
   ],
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
     },
     "./http": {
-      "import": "./dist/http.js",
-      "types": "./dist/http.d.ts"
+      "import": {
+        "types": "./dist/esm/http.d.ts",
+        "default": "./dist/esm/http.js"
+      },
+      "require": {
+        "types": "./dist/cjs/http.d.ts",
+        "default": "./dist/cjs/http.js"
+      }
     }
   },
   "devDependencies": {
@@ -24,7 +36,8 @@
     "hono": "^4.9.8",
     "postgres": "^3.4.7",
     "rewiremock": "^3.14.3",
-    "tsx": "^4.20.5"
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "@opentelemetry/api": "~1.9.0"
@@ -38,7 +51,7 @@
   },
   "scripts": {
     "test": "node --import=tsx --test test/**/*.spec.ts",
-    "build": "tsc"
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && echo '{\"type\":\"commonjs\"}' > dist/cjs/package.json"
   },
   "repository": {
     "type": "git",
@@ -50,5 +63,6 @@
   },
   "author": "Query Doctor",
   "license": "Apache-2.0",
-  "packageManager": "pnpm@10.16.1+sha512.0e155aa2629db8672b49e8475da6226aa4bdea85fdcdfdc15350874946d4f3c91faaf64cbdc4a5d1ab8002f473d5c3fcedcd197989cf0390f9badd3c04678706"
+  "packageManager": "pnpm@10.16.1+sha512.0e155aa2629db8672b49e8475da6226aa4bdea85fdcdfdc15350874946d4f3c91faaf64cbdc4a5d1ab8002f473d5c3fcedcd197989cf0390f9badd3c04678706",
+  "module": "dist/esm/index.js"
 }
