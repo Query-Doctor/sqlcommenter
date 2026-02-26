@@ -1,6 +1,6 @@
 {
   "name": "@query-doctor/sqlcommenter-typeorm",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "SQLCommenter patch for TypeORM",
   "main": "dist/cjs/index.js",
   "type": "module",
@@ -32,7 +32,7 @@
     }
   },
   "devDependencies": {
-    "@types/node": "^24.5.2",
+    "@types/node": "^20.19.34",
     "reflect-metadata": "^0.2.2",
     "sql.js": "^1.12.0",
     "tsx": "^4.20.5",
@@ -46,7 +46,7 @@
     "typeorm": ">=0.3.0"
   },
   "engines": {
-    "node": ">=24.8.0"
+    "node": ">=20.0.0"
   },
   "scripts": {
     "test": "node --import=tsx --test test/**/*.spec.ts",
