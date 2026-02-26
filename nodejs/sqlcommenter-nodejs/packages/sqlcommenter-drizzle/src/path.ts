@@ -54,7 +54,24 @@ export function resolveFilePath(raw: string): string {
   }
   const projectRoot = findProjectRoot();
   const relativePath = filePath.substring(srcIdx);
-  return `${projectRoot}/${relativePath}:${lineCol}`;
+  const resolved = `${projectRoot}/${relativePath}`;
+  return `${applyWslPrefix(resolved)}:${lineCol}`;
+}
+
+/**
+ * Prefixes an absolute path with the WSL network path when running inside WSL.
+ *
+ * Inside WSL, absolute paths like `/home/user/project/...` can't be resolved
+ * from Windows-side tooling (e.g., clickable links in dashboards or VS Code).
+ * The `WSL_DISTRO_NAME` env var is always set inside WSL, and the path format
+ * `//wsl.localhost/<distro>/...` makes paths accessible from Windows.
+ */
+export function applyWslPrefix(filePath: string): string {
+  const distro = process.env.WSL_DISTRO_NAME;
+  if (distro) {
+    return `//wsl.localhost/${distro}${filePath}`;
+  }
+  return filePath;
 }
 
 /** @internal Exposed for testing only */

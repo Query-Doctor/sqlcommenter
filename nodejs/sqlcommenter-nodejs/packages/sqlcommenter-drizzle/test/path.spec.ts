@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   findProjectRoot,
   resolveFilePath,
+  applyWslPrefix,
   _resetProjectRootCache,
 } from "../src/path.js";
 
@@ -69,5 +70,55 @@ test("resolveFilePath", async (t) => {
   await t.test("returns raw string if no line:column suffix", () => {
     const result = resolveFilePath("/some/path/src/file.ts");
     assert.strictEqual(result, "/some/path/src/file.ts");
+  });
+});
+
+test("applyWslPrefix", async (t) => {
+  const originalWslDistro = process.env.WSL_DISTRO_NAME;
+
+  t.afterEach(() => {
+    if (originalWslDistro === undefined) {
+      delete process.env.WSL_DISTRO_NAME;
+    } else {
+      process.env.WSL_DISTRO_NAME = originalWslDistro;
+    }
+  });
+
+  await t.test("prefixes path when WSL_DISTRO_NAME is set", () => {
+    process.env.WSL_DISTRO_NAME = "Ubuntu";
+    const result = applyWslPrefix("/home/user/project/src/index.ts");
+    assert.strictEqual(
+      result,
+      "//wsl.localhost/Ubuntu/home/user/project/src/index.ts",
+    );
+  });
+
+  await t.test("returns path unchanged when WSL_DISTRO_NAME is not set", () => {
+    delete process.env.WSL_DISTRO_NAME;
+    const result = applyWslPrefix("/home/user/project/src/index.ts");
+    assert.strictEqual(result, "/home/user/project/src/index.ts");
+  });
+});
+
+test("resolveFilePath with WSL", async (t) => {
+  const originalWslDistro = process.env.WSL_DISTRO_NAME;
+
+  t.afterEach(() => {
+    _resetProjectRootCache();
+    if (originalWslDistro === undefined) {
+      delete process.env.WSL_DISTRO_NAME;
+    } else {
+      process.env.WSL_DISTRO_NAME = originalWslDistro;
+    }
+  });
+
+  await t.test("applies WSL prefix to resolved src/ paths", () => {
+    process.env.WSL_DISTRO_NAME = "Ubuntu";
+    const projectRoot = findProjectRoot();
+    const result = resolveFilePath("/wrong/path/src/routes/admin.ts:12:15");
+    assert.strictEqual(
+      result,
+      `//wsl.localhost/Ubuntu${projectRoot}/src/routes/admin.ts:12:15`,
+    );
   });
 });
