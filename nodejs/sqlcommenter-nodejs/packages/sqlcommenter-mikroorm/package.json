@@ -1,0 +1,66 @@
+{
+  "name": "@query-doctor/sqlcommenter-mikroorm",
+  "version": "0.0.1",
+  "description": "SQLCommenter patch for MikroORM",
+  "main": "dist/cjs/index.js",
+  "type": "module",
+  "types": "dist/esm/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    },
+    "./http": {
+      "import": {
+        "types": "./dist/esm/http.d.ts",
+        "default": "./dist/esm/http.js"
+      },
+      "require": {
+        "types": "./dist/cjs/http.d.ts",
+        "default": "./dist/cjs/http.js"
+      }
+    }
+  },
+  "devDependencies": {
+    "@mikro-orm/better-sqlite": "^6.6.7",
+    "@types/node": "^24.5.2",
+    "better-sqlite3": "^12.6.2",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "~1.9.0"
+  },
+  "peerDependencies": {
+    "@mikro-orm/core": ">=6.4.0",
+    "@opentelemetry/core": ">=1.0.0"
+  },
+  "engines": {
+    "node": ">=24.8.0"
+  },
+  "scripts": {
+    "test": "node --import=tsx --test test/**/*.spec.ts",
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && echo '{\"type\":\"commonjs\"}' > dist/cjs/package.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/query-doctor/sqlcommenter.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "author": "Query Doctor",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@10.16.1+sha512.0e155aa2629db8672b49e8475da6226aa4bdea85fdcdfdc15350874946d4f3c91faaf64cbdc4a5d1ab8002f473d5c3fcedcd197989cf0390f9badd3c04678706",
+  "module": "dist/esm/index.js"
+}
