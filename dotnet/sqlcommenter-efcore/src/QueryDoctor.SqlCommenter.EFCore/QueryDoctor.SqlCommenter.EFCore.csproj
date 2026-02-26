@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>QueryDoctor.SqlCommenter.EFCore</RootNamespace>
+
+    <!-- NuGet package metadata -->
+    <PackageId>QueryDoctor.SqlCommenter.EFCore</PackageId>
+    <Version>8.0.0</Version>
+    <Authors>Query Doctor</Authors>
+    <Company>Query Doctor</Company>
+    <Description>EF Core interceptor that appends SQLCommenter-formatted comments to SQL queries for query attribution and observability.</Description>
+    <PackageTags>sqlcommenter;efcore;entity-framework-core;sql;observability</PackageTags>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/query-doctor/sqlcommenter</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/query-doctor/sqlcommenter.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- Source Link -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.0" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+</Project>

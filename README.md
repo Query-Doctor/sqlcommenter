@@ -23,3 +23,5 @@ Contains all the various `sqlcommenter-*` implementations.
   - [X] [MikroORM](nodejs/sqlcommenter-nodejs/packages/sqlcommenter-mikroorm/README.md)
 - [X] Php
   - [X] [Laravel](php/sqlcommenter-php/packages/sqlcommenter-laravel)
+- [X] .NET
+  - [X] [EF Core](dotnet/sqlcommenter-efcore/README.md)

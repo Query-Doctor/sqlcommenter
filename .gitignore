@@ -1,3 +1,12 @@
 php/sqlcommenter-php/packages/sqlcommenter-laravel/vendor/*
 .idea/**
 .DS_Store
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.nupkg
+*.snupkg
