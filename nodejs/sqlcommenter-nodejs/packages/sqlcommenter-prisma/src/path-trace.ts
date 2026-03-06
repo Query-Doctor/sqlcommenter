@@ -6,6 +6,9 @@ function isValidCaller(line: string): boolean {
   if (line.includes("node_modules")) {
     return false;
   }
+  if (line.includes("node:internal") || line.includes("node:async_hooks")) {
+    return false;
+  }
   // make sure we don't break our own tests
   if (line.includes(`${LIBRARY_NAME}/test/`)) {
     return true;
