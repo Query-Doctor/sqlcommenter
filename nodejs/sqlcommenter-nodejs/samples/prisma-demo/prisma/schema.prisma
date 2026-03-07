@@ -1,0 +1,82 @@
+generator client {
+  provider        = "prisma-client-js"
+
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  avatarUrl     String?
+  assignedIssues Issue[]  @relation("assignee")
+  createdIssues  Issue[]  @relation("creator")
+  comments      Comment[]
+  createdAt     DateTime  @default(now())
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  key         String   @unique
+  description String?
+  issues      Issue[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Issue {
+  id          String      @id @default(uuid())
+  number      Int
+  title       String
+  description String?
+  status      IssueStatus @default(OPEN)
+  priority    Priority    @default(MEDIUM)
+  projectId   String
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assigneeId  String?
+  assignee    User?       @relation("assignee", fields: [assigneeId], references: [id])
+  creatorId   String
+  creator     User        @relation("creator", fields: [creatorId], references: [id])
+  labels      Label[]
+  comments    Comment[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([projectId, number])
+}
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  IN_REVIEW
+  CLOSED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model Label {
+  id     String  @id @default(uuid())
+  name   String  @unique
+  color  String
+  issues Issue[]
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  body      String
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
