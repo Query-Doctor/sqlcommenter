@@ -1,0 +1,28 @@
+name: Nodejs Prisma Tests
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - nodejs/sqlcommenter-nodejs/packages/sqlcommenter-prisma/**
+  pull_request:
+    paths:
+      - nodejs/sqlcommenter-nodejs/packages/sqlcommenter-prisma/**
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: nodejs/sqlcommenter-nodejs/packages/sqlcommenter-prisma/package-lock.json
+      - run: npm install
+        working-directory: ./nodejs/sqlcommenter-nodejs/packages/sqlcommenter-prisma
+      - run: npm run build
+        working-directory: ./nodejs/sqlcommenter-nodejs/packages/sqlcommenter-prisma
+      - run: npm test
+        working-directory: ./nodejs/sqlcommenter-nodejs/packages/sqlcommenter-prisma
