@@ -1,6 +1,6 @@
 {
   "name": "@query-doctor/sqlcommenter-typeorm",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "SQLCommenter patch for TypeORM",
   "main": "dist/cjs/index.js",
   "type": "module",
@@ -42,7 +42,7 @@
     "@opentelemetry/api": "~1.9.0"
   },
   "peerDependencies": {
-    "@opentelemetry/core": ">=1.0.0",
+    "@opentelemetry/core": ">=2.8.0",
     "typeorm": ">=0.3.0"
   },
   "engines": {
