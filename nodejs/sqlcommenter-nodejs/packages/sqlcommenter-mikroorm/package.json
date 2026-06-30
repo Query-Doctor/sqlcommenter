@@ -28,12 +28,23 @@
         "types": "./dist/cjs/http.d.ts",
         "default": "./dist/cjs/http.js"
       }
+    },
+    "./fastify": {
+      "import": {
+        "types": "./dist/esm/fastify.d.ts",
+        "default": "./dist/esm/fastify.js"
+      },
+      "require": {
+        "types": "./dist/cjs/fastify.d.ts",
+        "default": "./dist/cjs/fastify.js"
+      }
     }
   },
   "devDependencies": {
     "@mikro-orm/better-sqlite": "^6.6.7",
     "@types/node": "^20.19.34",
     "better-sqlite3": "^12.6.2",
+    "fastify": "^5.2.0",
     "tsx": "^4.20.5",
     "typescript": "^5.9.3"
   },
@@ -42,7 +53,13 @@
   },
   "peerDependencies": {
     "@mikro-orm/core": ">=6.4.0",
-    "@opentelemetry/core": ">=2.8.0"
+    "@opentelemetry/core": ">=2.8.0",
+    "fastify": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "fastify": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=20.0.0"

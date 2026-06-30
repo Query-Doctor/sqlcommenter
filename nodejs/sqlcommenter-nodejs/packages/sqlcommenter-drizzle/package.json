@@ -28,11 +28,22 @@
         "types": "./dist/cjs/http.d.ts",
         "default": "./dist/cjs/http.js"
       }
+    },
+    "./fastify": {
+      "import": {
+        "types": "./dist/esm/fastify.d.ts",
+        "default": "./dist/esm/fastify.js"
+      },
+      "require": {
+        "types": "./dist/cjs/fastify.d.ts",
+        "default": "./dist/cjs/fastify.js"
+      }
     }
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.3.10",
     "@types/node": "^20.19.34",
+    "fastify": "^5.2.0",
     "hono": "^4.9.8",
     "postgres": "^3.4.7",
     "rewiremock": "^3.14.3",
@@ -44,7 +55,13 @@
   },
   "peerDependencies": {
     "@opentelemetry/core": ">=2.8.0",
-    "drizzle-orm": ">=0.35.0"
+    "drizzle-orm": ">=0.35.0",
+    "fastify": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "fastify": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=20.0.0"
