@@ -10,6 +10,7 @@ Emits the following fields into the query:
 | ------------- | -------------------- | --------------------------------------------------------------- |
 | db_driver     | Yes                  | The driver used to connect to the database. (MikroORM)          |
 | file          | Yes                  | The file that the query was executed in.                        |
+| func_name     | Yes, if named        | The function/method that built the query. Omitted if anonymous. |
 | route         | No                   | The route that the query was executed in.                       |
 | method        | No                   | The http method for the request that the query was executed in. |
 | anything else | No                   | Any other information that the user wants to add to the query.  |
