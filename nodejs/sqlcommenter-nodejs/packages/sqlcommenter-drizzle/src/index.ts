@@ -5,16 +5,27 @@ import { resolveFilePath } from "./path.js";
 
 const LIBRARY_NAME = "sqlcommenter-drizzle";
 
-type QueryContext = {
-  queryStack: string[];
-};
-
 type DriverSession = { prepareQuery: (query: unknown) => unknown };
 
-// We don't own the Session object here so using a WeakMap to prevent memory leaks
-// An alternative could be to set a Symbol in the Session to store the context
-// but this approach seems a little bit safer as we avoid interfacing with the object at all
-const contexts = new WeakMap<DriverSession, QueryContext>();
+// The caller's source location has to be captured when a query is *built* (e.g. `db.select()`),
+// because by the time the query actually executes the build-time stack frame is long gone.
+// That caller then has to reach the `prepareQuery` patch that writes the comment.
+//
+// A single `drizzle()` instance shares ONE session object across every query it builds, so the
+// caller cannot be keyed by the session: two queries built before either executes would collide
+// on the same entry, mis-attributing one `file` tag and dropping the other under any real
+// concurrency (e.g. two in-flight HTTP requests, or `Promise.all`).
+//
+// Instead we tag each built query object with its own caller, and publish that caller into
+// `currentCaller` for the *synchronous* window in which that specific query reaches
+// `prepareQuery` (`then`/`execute`/`prepare` -> `_prepare` -> `session.prepareQuery` runs with
+// no `await` in between). Because the window is synchronous, concurrent queries can never
+// interleave inside it, so each query reads exactly its own caller.
+let currentCaller: string | undefined;
+
+// Marks a query object whose `then`/`execute`/`prepare` have already been wrapped, so chained
+// rebuilds returning the same object aren't wrapped twice.
+const TAGGED = Symbol("sqlcommenter-drizzle.tagged");
 
 function isValidCaller(line: string): boolean {
   if (line.includes("node_modules")) {
@@ -59,22 +70,91 @@ export function traceCaller(): string | undefined {
   }
 }
 
-function patchMethod(
-  target: Function,
-  thisArg: unknown,
-  args: any[],
-  session: DriverSession,
-) {
-  const caller = traceCaller();
-  if (caller) {
-    const ctx = contexts.get(session);
-    if (ctx) {
-      ctx.queryStack.push(caller);
-    } else {
-      contexts.set(session, { queryStack: [caller] });
-    }
+/**
+ * Wraps `then`/`execute`/`prepare` on a built query so that, while the query synchronously
+ * reaches `prepareQuery`, its own build-time caller is the one published in `currentCaller`.
+ */
+function tagExecutable(executable: any, caller: string) {
+  if (!executable || typeof executable !== "object" || executable[TAGGED]) {
+    return;
   }
-  return Reflect.apply(target, thisArg, args);
+  executable[TAGGED] = true;
+  for (const method of ["then", "execute", "prepare"] as const) {
+    const original = executable[method];
+    if (typeof original !== "function") {
+      continue;
+    }
+    executable[method] = function (this: unknown, ...args: unknown[]) {
+      const previous = currentCaller;
+      currentCaller = caller;
+      try {
+        return original.apply(this, args);
+      } finally {
+        currentCaller = previous;
+      }
+    };
+  }
+}
+
+/**
+ * `db.select()`/`db.insert()`/`db.update()` return an intermediate *builder*; the executable
+ * query is produced one call later by `.from()`/`.values()`/`.set()`. We wrap the builder in a
+ * Proxy so that whatever its methods return is run back through `handleResult` and the eventual
+ * executable gets tagged with the caller captured at build time.
+ */
+function wrapBuilder(builder: any, caller: string): unknown {
+  return new Proxy(builder, {
+    get(target, prop, receiver) {
+      const value = Reflect.get(target, prop, receiver);
+      if (typeof value !== "function") {
+        return value;
+      }
+      return function (this: unknown, ...args: unknown[]) {
+        return handleResult(value.apply(target, args), caller);
+      };
+    },
+  });
+}
+
+function handleResult(result: any, caller: string): unknown {
+  if (!result || typeof result !== "object") {
+    return result;
+  }
+  // A built, executable query (a drizzle QueryPromise) is thenable — tag it directly.
+  if (typeof result.then === "function") {
+    tagExecutable(result, caller);
+    return result;
+  }
+  // Otherwise it's still a builder; keep wrapping until the executable shows up.
+  return wrapBuilder(result, caller);
+}
+
+/**
+ * Patches a builder-returning method (`select`/`insert`/`update`/`delete`/relational queries).
+ * The result is lazy, so we tag it and let `currentCaller` be set when it executes.
+ */
+function patchBuilderMethod(target: Function, thisArg: unknown, args: any[]) {
+  const caller = traceCaller();
+  const result = Reflect.apply(target, thisArg, args);
+  return caller ? handleResult(result, caller) : result;
+}
+
+/**
+ * Patches an eager method (`db.execute()`), which builds *and* reaches `prepareQuery`
+ * synchronously within this call, so the caller is published around the call itself.
+ */
+function patchImmediateMethod(target: Function, thisArg: unknown, args: any[]) {
+  const caller = traceCaller();
+  if (!caller) {
+    return Reflect.apply(target, thisArg, args);
+  }
+  const previous = currentCaller;
+  currentCaller = caller;
+  try {
+    return Reflect.apply(target, thisArg, args);
+  } finally {
+    currentCaller = previous;
+  }
 }
 
 const DRIZZLE_ORM_MODE_METHODS = ["findFirst", "findMany"] as const;
@@ -112,10 +192,8 @@ export function patchDrizzle<T>(
   ] as const;
   if (typeof drizzle.execute === "function") {
     drizzle.execute = new Proxy(drizzle.execute, {
-      apply(target, thisArg, args) {
-        const session = thisArg.session;
-        return patchMethod(target, thisArg, args, session);
-      },
+      apply: (target, thisArg, args) =>
+        patchImmediateMethod(target, thisArg, args),
     });
   }
   if (drizzle && "query" in drizzle && drizzle.query) {
@@ -126,10 +204,8 @@ export function patchDrizzle<T>(
           continue;
         }
         schema[func] = new Proxy(schema[func], {
-          apply(target, thisArg, args) {
-            const session = thisArg.session;
-            return patchMethod(target, thisArg, args, session);
-          },
+          apply: (target, thisArg, args) =>
+            patchBuilderMethod(target, thisArg, args),
         });
       }
     }
@@ -139,18 +215,13 @@ export function patchDrizzle<T>(
     if (!drizzle[method] || typeof drizzle[method] !== "function") {
       continue;
     }
-    // patching the CRUD functions.
-    // the correct function to patch here is QueryPromise.prototype.then
-    // but because of the way microtasks work, by the time `then` fires,
-    // the stack is already clear and the caller name is no longer available
-    // so we have to forcibly get it earlier when the query is built.
-    // TODO: This isn't 100% reliable as the user could build a query and not run it until much later
-    // which could throw off this process completely.
+    // Patching the CRUD entrypoints. The caller is captured here, when the query is built,
+    // because the build-time stack is the only place the user's call site is still visible —
+    // by the time the query executes (a microtask later) it's gone. `patchBuilderMethod` tags
+    // the built query so the caller is reattached for its own synchronous `prepareQuery` window.
     drizzle[method] = new Proxy(drizzle[method], {
-      apply(target, thisArg, args) {
-        const session = thisArg._.session;
-        return patchMethod(target, thisArg, args, session);
-      },
+      apply: (target, thisArg, args) =>
+        patchBuilderMethod(target, thisArg, args),
     });
   }
   return drizzle;
@@ -161,11 +232,6 @@ const WellKnownFields = {
   file: "file",
   route: "route",
 } as const;
-
-// This is very non-standard. If `file` is to be a semantic convention this probably
-// needs to be discussed with the community. It's what we use at query-doctor so
-// sticking with it f
-const SQLCOMMENTER_ARRAY_ELEM_DELIMITER = ";";
 
 /**
  * Drizzle session is responsible for serializing the query and sending it downstream to
@@ -183,35 +249,27 @@ function patchSession(session: DriverSession) {
   }
   proto.prepareQuery = new Proxy(proto.prepareQuery, {
     apply(target, thisArg, args) {
-      try {
-        const ctx = contexts.get(thisArg);
-        const requestContext = als.getStore();
-        const tags: [string, string][] = [
-          [WellKnownFields.dbDriver, "drizzle"],
-        ];
-        // adding traceparent and tracestate
-        pushW3CTraceContext(tags);
-        if (ctx) {
-          tags.push([
-            WellKnownFields.file,
-            // questionable
-            ctx.queryStack.join(SQLCOMMENTER_ARRAY_ELEM_DELIMITER),
-          ]);
-        }
-        if (args[0]) {
-          const query = args[0];
-          if (!alreadyHasComment(query.sql)) {
-            if (requestContext) {
-              for (const key in requestContext) {
-                tags.push([key, String(requestContext[key])]);
-              }
+      // `currentCaller` is set by the built query whose synchronous execution reached this
+      // call, so it's exactly the caller of the query being prepared.
+      const caller = currentCaller;
+      const requestContext = als.getStore();
+      const tags: [string, string][] = [[WellKnownFields.dbDriver, "drizzle"]];
+      // adding traceparent and tracestate
+      pushW3CTraceContext(tags);
+      if (caller) {
+        tags.push([WellKnownFields.file, caller]);
+      }
+      if (args[0]) {
+        const query = args[0];
+        if (!alreadyHasComment(query.sql)) {
+          if (requestContext) {
+            for (const key in requestContext) {
+              tags.push([key, String(requestContext[key])]);
             }
-            const sqlComment = serializeTags(tags);
-            query.sql += sqlComment;
           }
+          const sqlComment = serializeTags(tags);
+          query.sql += sqlComment;
         }
-      } finally {
-        contexts.delete(thisArg);
       }
       return Reflect.apply(target, thisArg, args);
     },
