@@ -108,5 +108,14 @@ test("patchMikroORM preserves original SQL content", () => {
 test("traceCaller returns a file path with line and column", () => {
   const caller = traceCaller();
   assert.ok(caller, "traceCaller should return a value");
-  assert.match(caller!, /:\d+:\d+$/, "Should end with :line:column");
+  assert.match(caller!.file, /:\d+:\d+$/, "file should end with :line:column");
+});
+
+test("traceCaller captures the enclosing function symbol when present", () => {
+  function loadRow() {
+    return traceCaller();
+  }
+  const caller = loadRow();
+  assert.ok(caller?.file, "file is always captured");
+  assert.strictEqual(caller?.symbol, "loadRow");
 });

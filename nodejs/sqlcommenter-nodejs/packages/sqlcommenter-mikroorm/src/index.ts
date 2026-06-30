@@ -30,7 +30,37 @@ function isValidCaller(line: string): boolean {
 // (file.ts:12:12) or file.ts:12:12
 const filepathRegex = /([^ (]*?:\d+:\d+)\)?$/;
 
-export function traceCaller(): string | undefined {
+/** The provenance captured from a single V8 stack frame. */
+export type CallerInfo = {
+  // The source location, `path:line:col`, resolved to the real project root.
+  file: string;
+  // The enclosing function/method symbol as V8 reports it (e.g. `UserService.list`). Absent for
+  // anonymous/top-level frames. Unlike `file`, it's edit-stable — a method name doesn't drift
+  // when lines above the call site change.
+  symbol?: string;
+};
+
+/**
+ * Pulls the enclosing function/method symbol out of a V8 stack frame. Named frames look like
+ * `    at <symbol> (<location>)`; anonymous/top-level frames are `    at <location>` with no
+ * symbol to capture, so we return nothing and the caller falls back to `file` alone.
+ */
+function extractSymbol(frame: string): string | undefined {
+  const match = frame.match(/^\s*at (.+) \(/);
+  if (!match) {
+    return;
+  }
+  // V8 prefixes async frames with `async ` in some versions; the symbol is what follows.
+  const symbol = match[1].replace(/^async /, "");
+  // Anonymous functions — including arrow-assigned methods that surface as
+  // `Object.<anonymous>` in bundled/minified builds — carry no stable name.
+  if (!symbol || symbol.includes("<anonymous>")) {
+    return;
+  }
+  return symbol;
+}
+
+export function traceCaller(): CallerInfo | undefined {
   const stack = new Error().stack;
   if (!stack) {
     return;
@@ -43,13 +73,14 @@ export function traceCaller(): string | undefined {
   }
   const match = methodCaller.match(filepathRegex);
   if (match) {
-    return resolveFilePath(match[1]);
+    return { file: resolveFilePath(match[1]), symbol: extractSymbol(methodCaller) };
   }
 }
 
 const WellKnownFields = {
   dbDriver: "db_driver",
   file: "file",
+  funcName: "func_name",
   route: "route",
 } as const;
 
@@ -71,8 +102,12 @@ function buildOnQuery(
         [WellKnownFields.dbDriver, "mikroorm"],
       ];
       pushW3CTraceContext(tags);
-      if (caller) {
-        tags.push([WellKnownFields.file, caller]);
+      if (caller?.file) {
+        tags.push([WellKnownFields.file, caller.file]);
+      }
+      // The enclosing symbol is edit-stable provenance; absent for anonymous frames.
+      if (caller?.symbol) {
+        tags.push([WellKnownFields.funcName, caller.symbol]);
       }
       if (requestContext) {
         for (const key in requestContext) {

@@ -21,7 +21,7 @@ type DriverSession = { prepareQuery: (query: unknown) => unknown };
 // `prepareQuery` (`then`/`execute`/`prepare` -> `_prepare` -> `session.prepareQuery` runs with
 // no `await` in between). Because the window is synchronous, concurrent queries can never
 // interleave inside it, so each query reads exactly its own caller.
-let currentCaller: string | undefined;
+let currentCaller: CallerInfo | undefined;
 
 // Marks a query object whose `then`/`execute`/`prepare` have already been wrapped, so chained
 // rebuilds returning the same object aren't wrapped twice.
@@ -48,7 +48,37 @@ function isValidCaller(line: string): boolean {
 // but its hard to parse that manually. Let future me deal with it
 const filepathRegex = /([^ (]*?:\d+:\d+)\)?$/;
 
-export function traceCaller(): string | undefined {
+/** The provenance captured from a single V8 stack frame. */
+export type CallerInfo = {
+  // The source location, `path:line:col`, resolved to the real project root.
+  file: string;
+  // The enclosing function/method symbol as V8 reports it (e.g. `UserService.list`,
+  // `reactionsRepo.findFavorites`). Absent for anonymous/top-level frames. Unlike `file`,
+  // a symbol is edit-stable — it doesn't drift when lines above the call site change.
+  symbol?: string;
+};
+
+/**
+ * Pulls the enclosing function/method symbol out of a V8 stack frame. Named frames look like
+ * `    at <symbol> (<location>)`; anonymous/top-level frames are `    at <location>` with no
+ * symbol to capture, so we return nothing and the caller falls back to `file` alone.
+ */
+function extractSymbol(frame: string): string | undefined {
+  const match = frame.match(/^\s*at (.+) \(/);
+  if (!match) {
+    return;
+  }
+  // V8 prefixes async frames with `async ` in some versions; the symbol is what follows.
+  const symbol = match[1].replace(/^async /, "");
+  // Anonymous functions — including arrow-assigned methods that surface as
+  // `Object.<anonymous>` in bundled/minified builds — carry no stable name.
+  if (!symbol || symbol.includes("<anonymous>")) {
+    return;
+  }
+  return symbol;
+}
+
+export function traceCaller(): CallerInfo | undefined {
   // we're not using the Error.capturaStackTrace because it doesn't play nicely
   // with stack traces that aren't full paths to a specific file.
   // eg: webpack:// or relative paths will produce no result at all so that's not usable
@@ -66,7 +96,8 @@ export function traceCaller(): string | undefined {
   }
   const match = methodCaller.match(filepathRegex);
   if (match) {
-    return resolveFilePath(match[1]);
+    // The symbol comes from the same frame we already selected — no new frame-selection logic.
+    return { file: resolveFilePath(match[1]), symbol: extractSymbol(methodCaller) };
   }
 }
 
@@ -74,7 +105,7 @@ export function traceCaller(): string | undefined {
  * Wraps `then`/`execute`/`prepare` on a built query so that, while the query synchronously
  * reaches `prepareQuery`, its own build-time caller is the one published in `currentCaller`.
  */
-function tagExecutable(executable: any, caller: string) {
+function tagExecutable(executable: any, caller: CallerInfo) {
   if (!executable || typeof executable !== "object" || executable[TAGGED]) {
     return;
   }
@@ -102,7 +133,7 @@ function tagExecutable(executable: any, caller: string) {
  * Proxy so that whatever its methods return is run back through `handleResult` and the eventual
  * executable gets tagged with the caller captured at build time.
  */
-function wrapBuilder(builder: any, caller: string): unknown {
+function wrapBuilder(builder: any, caller: CallerInfo): unknown {
   return new Proxy(builder, {
     get(target, prop, receiver) {
       const value = Reflect.get(target, prop, receiver);
@@ -116,7 +147,7 @@ function wrapBuilder(builder: any, caller: string): unknown {
   });
 }
 
-function handleResult(result: any, caller: string): unknown {
+function handleResult(result: any, caller: CallerInfo): unknown {
   if (!result || typeof result !== "object") {
     return result;
   }
@@ -230,6 +261,7 @@ export function patchDrizzle<T>(
 const WellKnownFields = {
   dbDriver: "db_driver",
   file: "file",
+  funcName: "func_name",
   route: "route",
 } as const;
 
@@ -256,8 +288,12 @@ function patchSession(session: DriverSession) {
       const tags: [string, string][] = [[WellKnownFields.dbDriver, "drizzle"]];
       // adding traceparent and tracestate
       pushW3CTraceContext(tags);
-      if (caller) {
-        tags.push([WellKnownFields.file, caller]);
+      if (caller?.file) {
+        tags.push([WellKnownFields.file, caller.file]);
+      }
+      // The enclosing symbol is edit-stable provenance; absent for anonymous frames.
+      if (caller?.symbol) {
+        tags.push([WellKnownFields.funcName, caller.symbol]);
       }
       if (args[0]) {
         const query = args[0];
