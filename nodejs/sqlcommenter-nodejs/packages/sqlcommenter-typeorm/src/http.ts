@@ -2,14 +2,15 @@ import { als } from "./als.js";
 import type { RequestContext } from "./request-context.js";
 
 /**
- * Wraps the next function in the AsyncLocalStorage with the request context.
- * Used to get `route` and `controller` information from the request into the query
- * without exposing the underlying AsyncLocalStorage API.
+ * Runs `next` within an AsyncLocalStorage scope carrying the request context, so any query
+ * issued during it picks up `route` (and any other provided fields such as `method` and
+ * `controller`) without exposing the underlying AsyncLocalStorage API.
+ *
+ * `next` is invoked for its side effect and its return value is ignored, so the parameter
+ * accepts any nullary callback — including framework hook callbacks like Fastify's
+ * `done: (err?: Error) => void` or Express's `next`.
  */
-export function withRequestContext(
-  context: RequestContext,
-  next: () => Promise<unknown>,
-) {
+export function withRequestContext(context: RequestContext, next: () => unknown) {
   als.run(context, next);
 }
 
