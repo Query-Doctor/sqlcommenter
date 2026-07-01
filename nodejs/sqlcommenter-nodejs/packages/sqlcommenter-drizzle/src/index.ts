@@ -190,6 +190,91 @@ function patchImmediateMethod(target: Function, thisArg: unknown, args: any[]) {
 
 const DRIZZLE_ORM_MODE_METHODS = ["findFirst", "findMany"] as const;
 
+const CRUD_METHODS = [
+  "select",
+  "selectDistinct",
+  "selectDistinctOn",
+  "insert",
+  "update",
+  "delete",
+] as const;
+
+// Marks a db/transaction object whose query methods we've already wrapped, so re-patching
+// (e.g. a double `patchDrizzle` call) is a no-op.
+const PATCHED_METHODS = Symbol("sqlcommenter-drizzle.patched-methods");
+
+type QueryMethodHost = {
+  execute?: unknown;
+  transaction?: unknown;
+  query?: Record<string, Record<string, unknown>>;
+  [key: string]: unknown;
+};
+
+/**
+ * Wraps the query-building methods on a drizzle db — or a transaction handle — so the caller is
+ * captured for every query built through it.
+ *
+ * `db.transaction(cb)` hands `cb` a fresh `tx` object whose methods are NOT the ones patched on
+ * the top-level db, so queries built inside a transaction would otherwise lose their
+ * `file`/`func_name` tags (only `db_driver`, added in `prepareQuery`, would survive). We wrap the
+ * transaction callback and recursively patch the `tx` — including any nested savepoint `tx` — the
+ * same way.
+ */
+function patchQueryMethods(target: QueryMethodHost) {
+  const guard = target as unknown as Record<symbol, boolean>;
+  if (!target || typeof target !== "object" || guard[PATCHED_METHODS]) {
+    return;
+  }
+  guard[PATCHED_METHODS] = true;
+
+  if (typeof target.execute === "function") {
+    target.execute = new Proxy(target.execute, {
+      apply: (fn, thisArg, args) => patchImmediateMethod(fn, thisArg, args),
+    });
+  }
+  if (target.query) {
+    for (const key in target.query) {
+      const schema = target.query[key];
+      for (const func of DRIZZLE_ORM_MODE_METHODS) {
+        if (!schema || typeof schema[func] !== "function") {
+          continue;
+        }
+        schema[func] = new Proxy(schema[func] as Function, {
+          apply: (fn, thisArg, args) => patchBuilderMethod(fn, thisArg, args),
+        });
+      }
+    }
+  }
+  for (const method of CRUD_METHODS) {
+    // not all drivers have all these calls so better be safe
+    if (typeof target[method] !== "function") {
+      continue;
+    }
+    // Patching the CRUD entrypoints. The caller is captured here, when the query is built,
+    // because the build-time stack is the only place the user's call site is still visible —
+    // by the time the query executes (a microtask later) it's gone. `patchBuilderMethod` tags
+    // the built query so the caller is reattached for its own synchronous `prepareQuery` window.
+    target[method] = new Proxy(target[method] as Function, {
+      apply: (fn, thisArg, args) => patchBuilderMethod(fn, thisArg, args),
+    });
+  }
+  if (typeof target.transaction === "function") {
+    target.transaction = new Proxy(target.transaction, {
+      apply(fn, thisArg, args) {
+        const [callback, ...rest] = args as [unknown, ...unknown[]];
+        if (typeof callback !== "function") {
+          return Reflect.apply(fn, thisArg, args);
+        }
+        const wrapped = function (this: unknown, tx: QueryMethodHost, ...cbArgs: unknown[]) {
+          patchQueryMethods(tx);
+          return (callback as Function).apply(this, [tx, ...cbArgs]);
+        };
+        return Reflect.apply(fn, thisArg, [wrapped, ...rest]);
+      },
+    });
+  }
+}
+
 export function patchDrizzle<T>(
   drizzle: T & {
     // is this nullable?
@@ -213,48 +298,7 @@ export function patchDrizzle<T>(
   } catch (e) {
     console.error("Error patching driver", e);
   }
-  const methods = [
-    "select",
-    "selectDistinct",
-    "selectDistinctOn",
-    "insert",
-    "update",
-    "delete",
-  ] as const;
-  if (typeof drizzle.execute === "function") {
-    drizzle.execute = new Proxy(drizzle.execute, {
-      apply: (target, thisArg, args) =>
-        patchImmediateMethod(target, thisArg, args),
-    });
-  }
-  if (drizzle && "query" in drizzle && drizzle.query) {
-    for (const key in drizzle.query) {
-      for (const func of DRIZZLE_ORM_MODE_METHODS) {
-        const schema = drizzle.query[key as keyof typeof drizzle.query];
-        if (!schema[func] || typeof schema[func] !== "function") {
-          continue;
-        }
-        schema[func] = new Proxy(schema[func], {
-          apply: (target, thisArg, args) =>
-            patchBuilderMethod(target, thisArg, args),
-        });
-      }
-    }
-  }
-  for (const method of methods) {
-    // not all drivers have all these calls so better be safe
-    if (!drizzle[method] || typeof drizzle[method] !== "function") {
-      continue;
-    }
-    // Patching the CRUD entrypoints. The caller is captured here, when the query is built,
-    // because the build-time stack is the only place the user's call site is still visible —
-    // by the time the query executes (a microtask later) it's gone. `patchBuilderMethod` tags
-    // the built query so the caller is reattached for its own synchronous `prepareQuery` window.
-    drizzle[method] = new Proxy(drizzle[method], {
-      apply: (target, thisArg, args) =>
-        patchBuilderMethod(target, thisArg, args),
-    });
-  }
+  patchQueryMethods(drizzle as QueryMethodHost);
   return drizzle;
 }
 
