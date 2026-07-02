@@ -42,7 +42,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.4",
-    "@types/node": "^20.19.34",
+    "@types/node": "^26.1.0",
     "fastify": "^5.2.0",
     "hono": "^4.9.8",
     "postgres": "^3.4.7",
