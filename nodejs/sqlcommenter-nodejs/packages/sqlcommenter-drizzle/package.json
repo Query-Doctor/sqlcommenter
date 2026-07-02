@@ -44,7 +44,7 @@
     "@electric-sql/pglite": "^0.5.4",
     "@types/node": "^26.1.0",
     "fastify": "^5.9.0",
-    "hono": "^4.9.8",
+    "hono": "^4.12.27",
     "postgres": "^3.4.7",
     "rewiremock": "^3.14.3",
     "tsx": "^4.20.5",
