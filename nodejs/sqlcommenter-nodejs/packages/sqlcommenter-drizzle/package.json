@@ -80,6 +80,6 @@
   },
   "author": "Query Doctor",
   "license": "Apache-2.0",
-  "packageManager": "npm@11.9.0",
+  "packageManager": "npm@11.18.0",
   "module": "dist/esm/index.js"
 }
